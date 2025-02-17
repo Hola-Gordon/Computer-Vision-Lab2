@@ -1,1 +1,58 @@
-{"GLCM": {"method": "GLCM", "accuracy": 28.89, "precision": 8.35}, "LBP": {"method": "LBP", "accuracy": 28.89, "precision": 8.54}}
+{
+  "GLCM": {
+    "method": "GLCM",
+    "accuracy": 82.22,
+    "precision": 85.73,
+    "recall": 82.22,
+    "class_accuracies": [
+      68.42,
+      92.31,
+      92.31
+    ],
+    "confusion_matrix": [
+      [
+        13,
+        4,
+        2
+      ],
+      [
+        0,
+        12,
+        1
+      ],
+      [
+        0,
+        1,
+        12
+      ]
+    ]
+  },
+  "LBP": {
+    "method": "LBP",
+    "accuracy": 62.22,
+    "precision": 66.4,
+    "recall": 62.22,
+    "class_accuracies": [
+      52.63,
+      61.54,
+      76.92
+    ],
+    "confusion_matrix": [
+      [
+        10,
+        8,
+        1
+      ],
+      [
+        4,
+        8,
+        1
+      ],
+      [
+        0,
+        3,
+        10
+      ]
+    ]
+  }
+}

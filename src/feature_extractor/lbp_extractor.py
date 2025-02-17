@@ -7,10 +7,9 @@ class LBPExtractor:
     """Extract Local Binary Pattern (LBP) features from images."""
     
     def __init__(self):
-        self.radius = 3
-        self.n_points = 24  # Add these two lines
-        self.scales = [(1, 8), (2, 16), (3, 24)]
-        self.method = 'ror'
+        self.radius = 2
+        self.n_points = 16
+        self.method = 'uniform'
 
     def extract_features(self, image):
         """Extract LBP features from an image.

@@ -9,23 +9,19 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from src.evaluation.evaluator import Evaluator
 from src.utils.preprocessing import preprocess_image
+from src.feature_extractor.glcm_extractor import GLCMExtractor
 
 
 class TextureClassifier:
-    """Classifier for texture recognition using extracted features."""
-    
-    def __init__(self, feature_extractor):
-        self.feature_extractor = feature_extractor  # Add this line
+    def __init__(self, feature_extractor, classifier_type='svm'):
+        self.feature_extractor = feature_extractor
         self.scaler = StandardScaler()
-        self.classifier = SVC(probability=True, kernel='rbf')
-        self.classifiers = {
-            'svm': SVC(probability=True, kernel='rbf'),
-            'knn': KNeighborsClassifier(n_neighbors=5),
-            'dt': DecisionTreeClassifier(),
-            'rf': RandomForestClassifier(n_estimators=100)
-        }
-        self.best_classifier = None
-        self.cv_scores = {}
+        
+        # Choose different classifiers based on the feature extractor type
+        if isinstance(feature_extractor, GLCMExtractor):
+            self.classifier = SVC(probability=True, kernel='rbf')
+        else:  # LBPExtractor
+            self.classifier = RandomForestClassifier(n_estimators=100)
     
     def extract_features_batch(self, images):
         """Extract features from a batch of images.

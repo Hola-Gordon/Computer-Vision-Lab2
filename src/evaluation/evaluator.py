@@ -1,36 +1,19 @@
-import numpy as np
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import accuracy_score, precision_score
 
 class Evaluator:
-    """Minimal evaluator for texture classification."""
-    
-    def evaluate_model(self, model, X_test, y_test, class_names, method_name):
-        """
-        Simple evaluation using just accuracy and confusion matrix.
-        """
-        # Get predictions
+    def evaluate_model(self, model, X_test, y_test, method_name):
+        """Calculate accuracy and precision only."""
         y_pred = model.predict(X_test)
         
-        # Calculate accuracy
+        # Calculate metrics
         accuracy = accuracy_score(y_test, y_pred)
-        
-        # Get confusion matrix
-        conf_matrix = confusion_matrix(y_test, y_pred)
-        
-        # Print results
-        print(f"\n{method_name} Results:")
-        print(f"Accuracy: {accuracy:.3f}")
-        print("\nConfusion Matrix:")
-        print(conf_matrix)
+        # Add zero_division parameter to handle the warning
+        precision = precision_score(y_test, y_pred, 
+                                 average='weighted', 
+                                 zero_division=0)
         
         return {
             'method': method_name,
-            'accuracy': accuracy,
-            'confusion_matrix': conf_matrix
+            'accuracy': round(accuracy * 100, 2),
+            'precision': round(precision * 100, 2)
         }
-    
-    def compare_methods(self, methods_results):
-        """Simple comparison of method accuracies."""
-        print("\nMethod Comparison:")
-        for method, results in methods_results.items():
-            print(f"{method} Accuracy: {results['accuracy']:.3f}")

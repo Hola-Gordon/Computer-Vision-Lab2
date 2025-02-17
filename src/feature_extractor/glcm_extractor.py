@@ -1,21 +1,20 @@
 import numpy as np
+import cv2
 from skimage.feature import graycomatrix, graycoprops
+
 
 class GLCMExtractor:
     """Extract Gray Level Co-occurrence Matrix (GLCM) features from images."""
     
-    def __init__(self, distances=[1], angles=[0, np.pi/4, np.pi/2, 3*np.pi/4]):
-        """Initialize GLCM feature extractor.
-        
-        Args:
-            distances (list): List of pixel pair distances
-            angles (list): List of pixel pair angles in radians
-        """
-        self.distances = distances
-        self.angles = angles
-        self.properties = ['contrast', 'dissimilarity', 'homogeneity', 
-                          'energy', 'correlation', 'ASM']
-    
+    def __init__(self):
+        self.distances = [1, 2, 3]  # Multiple distances
+        self.angles = [0, np.pi/4, np.pi/2, 3*np.pi/4]  # More angles
+        self.properties = [
+            'contrast', 'dissimilarity', 'homogeneity', 
+            'energy', 'correlation', 'ASM',
+            'entropy', 'variance'  # Additional properties
+        ]
+
     def extract_features(self, image):
         """Extract GLCM features from an image.
         

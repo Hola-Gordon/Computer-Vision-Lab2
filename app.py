@@ -1,12 +1,15 @@
 import os
-import cv2  # Added missing import
+import cv2 
 import numpy as np
 import gradio as gr
+import matplotlib.pyplot as plt
 from src.data.data_loader import DataLoader
 from src.feature_extractor.glcm_extractor import GLCMExtractor
 from src.feature_extractor.lbp_extractor import LBPExtractor
 from src.models.classifier import TextureClassifier
-from src.utils.preprocessing import preprocess_image
+from src.evaluation.evaluator import Evaluator
+from sklearn.model_selection import train_test_split
+
 
 class TextureClassifierApp:
     def __init__(self):
@@ -19,120 +22,115 @@ class TextureClassifierApp:
         
     def train_models(self):
         """Train both GLCM and LBP classifiers."""
-        print("Loading dataset...")
         images, labels = self.data_loader.load_dataset()
         
-        if len(np.unique(labels)) < 2:
-            raise ValueError("Need at least 2 classes with images to train. Please check your data/raw directory.")
+        # Split data
+        X_train, X_test, y_train, y_test = train_test_split(
+            images, labels, test_size=0.3, random_state=42
+        )
         
-        print("\nTraining GLCM classifier...")
-        glcm_accuracy = self.glcm_classifier.train(images, labels)
+        evaluator = Evaluator()
+        results = {}
         
-        print("Training LBP classifier...")
-        lbp_accuracy = self.lbp_classifier.train(images, labels)
+        # Train and evaluate both methods
+        for name, clf in [("GLCM", self.glcm_classifier), ("LBP", self.lbp_classifier)]:
+            # Extract features
+            X_train_features = []
+            for image in X_train:
+                features = clf.feature_extractor.extract_features(image)
+                X_train_features.append(features)
+            X_train_features = np.array(X_train_features)
+            
+            X_test_features = []
+            for image in X_test:
+                features = clf.feature_extractor.extract_features(image)
+                X_test_features.append(features)
+            X_test_features = np.array(X_test_features)
+            
+            # Train
+            clf.train(X_train_features, y_train)
+            
+            # Evaluate
+            results[name] = evaluator.evaluate_model(
+                clf.classifier,
+                X_test_features,
+                y_test,
+                self.class_names,
+                name
+            )
         
-        print(f"\nResults:")
-        print(f"GLCM Accuracy: {glcm_accuracy:.2f}")
-        print(f"LBP Accuracy: {lbp_accuracy:.2f}")
+        # Compare methods
+        evaluator.compare_methods(results)
         
         self.save_models()
+        return results
     
     def predict(self, image, method):
-        """Process image and return prediction."""
-        try:
-            # Convert from numpy array to correct format
-            if image is None:
-                raise ValueError("No image provided")
+        """Classify an image using selected method."""
+        # Convert to grayscale if needed
+        if len(image.shape) == 3:
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        
+        # Preprocess and predict
+        image = cv2.resize(image, (200, 200))
+        if method == "GLCM":
+            probabilities = self.glcm_classifier.predict(image)
+        else:
+            probabilities = self.lbp_classifier.predict(image)
+        
+        return {self.class_names[i]: float(prob) 
+                for i, prob in enumerate(probabilities)}
+    
+    def create_interface(self):
+        """Create Gradio interface."""
+        with gr.Blocks() as iface:
+            gr.Markdown("# Texture Classifier")
+            
+            with gr.Row():
+                with gr.Column():
+                    input_image = gr.Image(label="Upload Image")
+                    method = gr.Radio(
+                        ["GLCM", "LBP"], 
+                        label="Method",
+                        value="GLCM"
+                    )
+                    classify_btn = gr.Button("Classify")
                 
-            # Convert image to grayscale if it's RGB
-            if len(image.shape) == 3:
-                if image.shape[2] == 4:  # RGBA
-                    image = cv2.cvtColor(image, cv2.COLOR_RGBA2GRAY)
-                else:  # RGB
-                    image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+                output_label = gr.Label(label="Result")
             
-            # Preprocess image
-            processed_image = preprocess_image(image)
+            classify_btn.click(
+                fn=self.predict,
+                inputs=[input_image, method],
+                outputs=output_label
+            )
             
-            # Get prediction
-            if method == "GLCM":
-                probabilities = self.glcm_classifier.predict(processed_image)
-            else:  # LBP
-                probabilities = self.lbp_classifier.predict(processed_image)
-            
-            # Create results dictionary
-            return {self.class_names[i]: float(prob) 
-                    for i, prob in enumerate(probabilities)}
-                    
-        except Exception as e:
-            print(f"Error in prediction: {str(e)}")
-            return {class_name: 0.0 for class_name in self.class_names}
+        return iface
     
     def save_models(self):
-        """Save trained models to disk."""
+        """Save trained models."""
         os.makedirs("trained_models", exist_ok=True)
         self.glcm_classifier.save("trained_models/glcm_model.pkl")
         self.lbp_classifier.save("trained_models/lbp_model.pkl")
-        
+    
     def load_models(self):
-        """Load trained models from disk."""
+        """Load trained models."""
         self.glcm_classifier.load("trained_models/glcm_model.pkl")
         self.lbp_classifier.load("trained_models/lbp_model.pkl")
-    
-    def create_interface(self):
-        """Create and return Gradio interface."""
-        iface = gr.Interface(
-            fn=self.predict,
-            inputs=[
-                gr.Image(label="Upload Image"),
-                gr.Radio(["GLCM", "LBP"], label="Method", value="GLCM")
-            ],
-            outputs=gr.Label(label="Texture Classification"),
-            title="Texture Classifier",
-            description="Upload an image to classify its texture as Stone, Brick, or Wood"
-        )
-        return iface
+
 
 def main():
-    try:
-        print("Initializing application...")
-        app = TextureClassifierApp()
-        
-        # Check data directory structure
-        raw_path = "data/raw"
-        if not os.path.exists(raw_path):
-            raise ValueError(f"Data directory not found: {raw_path}")
-            
-        # Print number of images in each class
-        print("\nChecking dataset:")
-        for class_name in ['stone', 'brick', 'wood']:
-            class_path = os.path.join(raw_path, class_name)
-            if os.path.exists(class_path):
-                images = [f for f in os.listdir(class_path) 
-                         if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-                print(f"{class_name}: {len(images)} images")
-            else:
-                print(f"{class_name}: directory not found")
-        
-        if os.path.exists("trained_models/glcm_model.pkl"):
-            print("\nLoading existing models...")
-            app.load_models()
-        else:
-            print("\nTraining new models...")
-            app.train_models()
-        
-        print("\nLaunching interface...")
-        interface = app.create_interface()
-        interface.launch()
-        
-    except Exception as e:
-        print(f"\nError: {str(e)}")
-        print("\nPlease ensure your data directory structure is as follows:")
-        print("data/")
-        print("  └── raw/")
-        print("      ├── stone/   (containing .jpg, .jpeg, or .png files)")
-        print("      ├── brick/   (containing .jpg, .jpeg, or .png files)")
-        print("      └── wood/    (containing .jpg, .jpeg, or .png files)")
+    app = TextureClassifierApp()
+    
+    # Train or load models
+    if os.path.exists("trained_models/glcm_model.pkl"):
+        app.load_models()
+    else:
+        app.train_models()
+    
+    # Launch interface
+    interface = app.create_interface()
+    interface.launch()
+
 
 if __name__ == "__main__":
     main()

@@ -1,21 +1,17 @@
 import numpy as np
+import cv2
 from skimage.feature import local_binary_pattern
+
 
 class LBPExtractor:
     """Extract Local Binary Pattern (LBP) features from images."""
     
-    def __init__(self, radius=3, n_points=24, method='uniform'):
-        """Initialize LBP feature extractor.
-        
-        Args:
-            radius (int): Radius of circle for sampling points
-            n_points (int): Number of sampling points
-            method (str): Type of LBP operator
-        """
-        self.radius = radius
-        self.n_points = n_points
-        self.method = method
-    
+    def __init__(self):
+        self.radius = 3
+        self.n_points = 24  # Add these two lines
+        self.scales = [(1, 8), (2, 16), (3, 24)]
+        self.method = 'ror'
+
     def extract_features(self, image):
         """Extract LBP features from an image.
         

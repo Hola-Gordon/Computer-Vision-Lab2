@@ -1,22 +1,31 @@
 import numpy as np
 import joblib
+import cv2
 from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from src.evaluation.evaluator import Evaluator
+from src.utils.preprocessing import preprocess_image
 
 
 class TextureClassifier:
     """Classifier for texture recognition using extracted features."""
     
     def __init__(self, feature_extractor):
-        """Initialize the classifier.
-        
-        Args:
-            feature_extractor: Feature extraction object (GLCM or LBP)
-        """
-        self.feature_extractor = feature_extractor
+        self.feature_extractor = feature_extractor  # Add this line
         self.scaler = StandardScaler()
         self.classifier = SVC(probability=True, kernel='rbf')
+        self.classifiers = {
+            'svm': SVC(probability=True, kernel='rbf'),
+            'knn': KNeighborsClassifier(n_neighbors=5),
+            'dt': DecisionTreeClassifier(),
+            'rf': RandomForestClassifier(n_estimators=100)
+        }
+        self.best_classifier = None
+        self.cv_scores = {}
     
     def extract_features_batch(self, images):
         """Extract features from a batch of images.
@@ -33,48 +42,50 @@ class TextureClassifier:
             features.append(feat)
         return np.array(features)
     
-    def train(self, images, labels, test_size=0.2):
-        """Train the classifier.
+    def train(self, features, labels):
+        """Train the classifier using pre-extracted features.
         
         Args:
-            images (numpy.ndarray): Training images
-            labels (numpy.ndarray): Corresponding labels
-            test_size (float): Proportion of dataset to use for testing
-            
-        Returns:
-            float: Classification accuracy on test set
+            features: Pre-extracted feature vectors (already extracted, don't extract again)
+            labels: Corresponding labels
         """
-        # Extract features from all images
-        features = self.extract_features_batch(images)
-        
-        # Split dataset
-        X_train, X_test, y_train, y_test = train_test_split(
-            features, labels, test_size=test_size, random_state=42
-        )
+        # No need to extract features again since they're already extracted
         
         # Scale features
-        X_train = self.scaler.fit_transform(X_train)
-        X_test = self.scaler.transform(X_test)
+        self.scaler.fit(features)
+        X_scaled = self.scaler.transform(features)
         
         # Train classifier
-        self.classifier.fit(X_train, y_train)
+        self.classifier.fit(X_scaled, labels)
         
-        # Return accuracy
-        return self.classifier.score(X_test, y_test)
-    
     def predict(self, image):
-        """Predict the texture class of an image.
-        
-        Args:
-            image (numpy.ndarray): Input image
+        """Predict the texture class of an image."""
+        try:
+            if image is None:
+                raise ValueError("No image provided")
+                
+            # Preprocess image
+            if len(image.shape) == 3:
+                if image.shape[2] == 4:  # RGBA
+                    image = cv2.cvtColor(image, cv2.COLOR_RGBA2GRAY)
+                else:  # RGB
+                    image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
             
-        Returns:
-            numpy.ndarray: Class probabilities
-        """
-        features = self.feature_extractor.extract_features(image)
-        features = features.reshape(1, -1)
-        features = self.scaler.transform(features)
-        return self.classifier.predict_proba(features)[0]
+            # Extract features
+            features = self.feature_extractor.extract_features(image)
+            features = features.reshape(1, -1)
+            
+            # Scale features
+            features_scaled = self.scaler.transform(features)
+            
+            # Make prediction
+            probabilities = self.classifier.predict_proba(features_scaled)[0]
+            
+            return probabilities
+            
+        except Exception as e:
+            print(f"Error in prediction: {str(e)}")
+            raise
     
     def save(self, path):
         """Save the trained model to disk.

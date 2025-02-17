@@ -15,6 +15,7 @@ import json
 class TextureClassifierApp:
     def __init__(self):
         self.data_loader = DataLoader("data/raw")
+        self.class_names = self.data_loader.classes
         self.glcm_extractor = GLCMExtractor()
         self.lbp_extractor = LBPExtractor()
         self.glcm_classifier = TextureClassifier(self.glcm_extractor, 'svm')
@@ -123,6 +124,7 @@ class TextureClassifierApp:
             
         return iface
 
+
 def main():
     app = TextureClassifierApp()
     
@@ -142,6 +144,7 @@ def main():
     # Launch interface
     interface = app.create_interface()
     interface.launch()
+
 
 if __name__ == "__main__":
     main()

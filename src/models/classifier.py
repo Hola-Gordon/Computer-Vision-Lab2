@@ -19,9 +19,18 @@ class TextureClassifier:
         
         # Choose different classifiers based on the feature extractor type
         if isinstance(feature_extractor, GLCMExtractor):
-            self.classifier = SVC(probability=True, kernel='rbf')
+            self.classifier = SVC(
+                probability=True, 
+                kernel='rbf', 
+                C=10,  # Tuned hyperparameters
+                gamma=0.1
+            )
         else:  # LBPExtractor
-            self.classifier = RandomForestClassifier(n_estimators=100)
+            self.classifier = RandomForestClassifier(
+                n_estimators=200, 
+                max_depth=10,  # Limit tree depth
+                random_state=42
+            )
     
     def extract_features_batch(self, images):
         """Extract features from a batch of images.

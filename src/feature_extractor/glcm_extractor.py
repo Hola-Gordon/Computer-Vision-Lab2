@@ -7,8 +7,9 @@ class GLCMExtractor:
     """Extract Gray Level Co-occurrence Matrix (GLCM) features from images."""
     
     def __init__(self):
-        self.distances = [1, 2, 3]  # Increased distances
-        self.angles = [0, np.pi/4, np.pi/2, 3*np.pi/4]
+
+        self.distances = [1, 2, 3]  # Multiple distances capture textures at different scales
+        self.angles = [0, np.pi/4, np.pi/2, 3*np.pi/4]  # All principal directions for rotation invariance
         self.properties = ['contrast', 'homogeneity', 'energy', 'correlation', 'dissimilarity']
 
     def extract_features(self, image):

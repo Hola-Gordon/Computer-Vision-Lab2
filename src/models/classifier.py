@@ -6,6 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from src.feature_extractor.glcm_extractor import GLCMExtractor
 
+
 class TextureClassifier:
     def __init__(self, feature_extractor, classifier_type='svm'):
         self.feature_extractor = feature_extractor

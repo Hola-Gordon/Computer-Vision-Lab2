@@ -10,9 +10,10 @@ from src.evaluation.evaluator import Evaluator
 from sklearn.model_selection import train_test_split
 import json
 
+
 class TextureClassifierApp:
     def __init__(self):
-        self.data_loader = DataLoader("data/raw")  # Use raw data for training
+        self.data_loader = DataLoader("data/raw") 
         self.class_names = self.data_loader.classes
         self.glcm_extractor = GLCMExtractor()
         self.lbp_extractor = LBPExtractor()
@@ -59,6 +60,7 @@ class TextureClassifierApp:
             with gr.Row():
                 gr.Markdown("# Texture Classifier")
             
+
             # Top section: Image upload and classification
             with gr.Row():
                 with gr.Column():
@@ -70,6 +72,14 @@ class TextureClassifierApp:
                     )
                     classify_btn = gr.Button("Classify")
                     result_label = gr.Label(label="Classification Result")
+                    visual_indicator = gr.HTML(label="Visual Indicator")
+
+            # Update the click function
+            classify_btn.click(
+                fn=self.predict_with_visual_feedback,
+                inputs=[input_img, method_choice],
+                outputs=[result_label, visual_indicator]
+            )
             
             # Middle section: Example images
             gr.Markdown("### Example Images from Each Category")
@@ -83,7 +93,7 @@ class TextureClassifierApp:
                             inputs=example_image,
                             outputs=input_img
                         )
-            
+
             # Bottom section: Model metrics
             gr.Markdown("### Model Performance Metrics")
             with gr.Row():
@@ -93,35 +103,69 @@ class TextureClassifierApp:
                         metrics = self.metrics.get(method, {})
                         confusion_matrix = np.array(metrics.get('confusion_matrix', []))
                         
-                        metrics_md = f"""
-                        - **Accuracy**: {metrics.get('accuracy', 0):.2f}%
-                        - **Precision**: {metrics.get('precision', 0):.2f}%
-                        - **Recall**: {metrics.get('recall', 0):.2f}%
+                        metrics_md = f"""- **Accuracy**: {metrics.get('accuracy', 0):.2f}%
+            - **Precision**: {metrics.get('precision', 0):.2f}%
+            - **Recall**: {metrics.get('recall', 0):.2f}%
+
+            Per-class Accuracy:
+            """
+                        class_accuracies = metrics.get('class_accuracies', [])
+                        if class_accuracies and len(class_accuracies) > 0:
+                            for i in range(min(len(class_accuracies), len(self.class_names))):
+                                metrics_md += f"- {self.class_names[i]}: {class_accuracies[i]:.2f}%\n"
                         
-                        Per-class Accuracy:
-                        """
-                        for i, acc in enumerate(metrics.get('class_accuracies', [])):
-                            metrics_md += f"- {self.class_names[i]}: {acc:.2f}%\n"
-                        
+                        # Only one confusion matrix display section
                         if confusion_matrix.size > 0:
+                            # Text version for reference
                             metrics_md += "\nConfusion Matrix:\n```\n"
                             for row in confusion_matrix:
                                 metrics_md += f"{row}\n"
-                            metrics_md += "```"
+                            metrics_md += "```\n"
+                            
+                            # Visualization using HTML
+                            metrics_md += "\nConfusion Matrix Visualization:\n"
+                            # Create HTML table with color coding
+                            html_table = "<table style='border-collapse: collapse; text-align: center;'>"
+                            # Add header row with class names
+                            html_table += "<tr><th></th>"
+                            for class_name in self.class_names:
+                                html_table += f"<th style='padding: 8px; border: 1px solid gray;'>{class_name}</th>"
+                            html_table += "</tr>"
+                            
+                            # Get max value for color scaling
+                            max_val = np.max(confusion_matrix)
+                            
+                            # Add data rows
+                            for i, row in enumerate(confusion_matrix):
+                                html_table += f"<tr><td style='padding: 8px; border: 1px solid gray; font-weight: bold;'>{self.class_names[i]}</td>"
+                                for j, cell in enumerate(row):
+                                    # Calculate color intensity (darker blue for higher values)
+                                    intensity = int(200 * (1 - cell / max_val)) if max_val > 0 else 200
+                                    bg_color = f"rgb({intensity}, {intensity}, 255)"
+                                    # Highlight diagonal (correct predictions) with a different color
+                                    if i == j:
+                                        bg_color = f"rgb(100, 200, 100)"
+                                    html_table += f"<td style='padding: 8px; border: 1px solid gray; background-color: {bg_color};'>{cell}</td>"
+                                html_table += "</tr>"
+                            html_table += "</table>"
+                            
+                            metrics_md += html_table
+
                         
                         gr.Markdown(metrics_md)
             
-            classify_btn.click(
-                fn=self.predict,
-                inputs=[input_img, method_choice],
-                outputs=result_label
-            )
+            # classify_btn.click(
+            #     fn=self.predict,
+            #     inputs=[input_img, method_choice],
+            #     outputs=result_label
+            # )
             
         return iface
 
     def train_models(self):
-        """Train models using data from raw directory"""
-        images, labels = self.data_loader.load_dataset()  # Uses raw data
+        """Train models using data from raw directory and return evaluation metrics.
+        de"""
+        images, labels = self.data_loader.load_dataset() 
         X_train, X_test, y_train, y_test = train_test_split(
             images, labels, test_size=0.3, random_state=42
         )
@@ -168,6 +212,46 @@ class TextureClassifierApp:
             with open("trained_models/metrics.json", 'r') as f:
                 self.metrics = json.load(f)
 
+    def predict_with_visual_feedback(self, image, method):
+        """Predict with regular output and generate a visual indicator"""
+        if image is None:
+            return None, None
+                
+        if len(image.shape) == 3:
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        
+        image = cv2.resize(image, (200, 200))
+        if method == "GLCM":
+            probabilities = self.glcm_classifier.predict(image)
+        else:
+            probabilities = self.lbp_classifier.predict(image)
+        
+        # Get class predictions
+        pred_dict = {self.class_names[i]: float(prob) 
+                    for i, prob in enumerate(probabilities)}
+        
+        # Find the most likely class
+        most_likely_class = max(pred_dict, key=pred_dict.get)
+        
+        # Create a visual feedback HTML based on predicted class
+        if most_likely_class == "stone":
+            color = "#DDDDDD"  # Gray
+        elif most_likely_class == "brick":
+            color = "#E8B4B4"  # Reddish
+        else:  # wood
+            color = "#D2B48C"  # Brown
+            
+        visual_feedback = f"""
+        <div style="display: flex; align-items: center; margin-top: 10px;">
+        <div style="width: 30px; height: 30px; background-color: {color}; 
+                    border-radius: 4px; margin-right: 10px; border: 1px solid #999;"></div>
+        <div><strong>Detected: {most_likely_class.capitalize()}</strong></div>
+        </div>
+        """
+        
+        return pred_dict, visual_feedback
+
+
 def main():
     app = TextureClassifierApp()
     
@@ -178,6 +262,7 @@ def main():
     
     interface = app.create_interface()
     interface.launch()
+
 
 if __name__ == "__main__":
     main()

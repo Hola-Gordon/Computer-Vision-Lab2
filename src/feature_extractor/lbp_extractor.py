@@ -11,6 +11,12 @@ class LBPExtractor:
         self.n_points = 24
         self.method = 'uniform'
 
+    def experiment_parameters(self):
+        """Test different radii and neighbor configurations to find optimal parameters"""
+        radii = [1, 2, 3, 4]
+        points = [8, 16, 24]
+        results = {}
+
     def extract_features(self, image):
         """Extract LBP features from an image.
         

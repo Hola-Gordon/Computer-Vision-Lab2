@@ -1,6 +1,7 @@
 from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix
 import numpy as np
 
+
 class Evaluator:
     def evaluate_model(self, model, X_test, y_test, method_name):
         """Evaluate model performance with comprehensive metrics."""

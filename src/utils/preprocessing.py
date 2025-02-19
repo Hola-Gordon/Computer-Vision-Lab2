@@ -23,9 +23,6 @@ def preprocess_image(image, target_size=(200, 200)):
     # Apply histogram equalization to normalize brightness
     image = cv2.equalizeHist(image)
     
-    # # Optional: Add noise reduction
-    # image = cv2.GaussianBlur(image, (3, 3), 0)
-    
     return image
 
 

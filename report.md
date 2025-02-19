@@ -68,7 +68,7 @@ When I started collecting texture images, I didn't filter for quality. This crea
 
 ### 4.1 Why Image Quality Matters
 
-**Lighting Issues:** Think of a brick wall photographed at different times of day. Morning light shows clear texture, noon sun washes it out, and evening creates long shadows. To my algorithm, these looked like completely different textures! LBP was especially confused since it relies on brightness patterns between pixels.
+**Lighting Issues:** Think of a brick wall photographed at different times of day. Morning light shows clear texture, noon sun washes it out, and evening creates long shadows. To my algorithm, these looked like completely different textures. LBP was especially confused since it relies on brightness patterns between pixels.
 
 **Background Distractions:** Wood images with knots or brick images where the mortar lines were prominent often confused the classifiers. The algorithms sometimes focused on these irregular elements instead of the actual texture patterns.
 
@@ -102,13 +102,17 @@ LBP performed well on stone textures because stone typically has distinctive loc
 
 ### 6.1 Example Misclassifications
 
-![Missclassification](data/missclassification.png)
+![Screenshot](data/missclassification.png)
 
 The images above show examples where the classifications failed. Several patterns emerge:
 
-1. **Wood misclassified as brick**: This typically occurred when wood grain had regular patterns similar to brick spacing or when the wood had strong linear elements.
+**Brick misclassified as stone by LBP**: This common misclassification occurred could due to several factors:
+   - Weathered brick surfaces with rough texture create similar LBP patterns to stone
+   - When brick images contain significant texture variation within each brick unit, LBP captures local intensity changes similar to stone's irregular surface
+   - The fixed radius of LBP (r=3) might not effectively capture the larger structural patterns of bricks
+   - Shadows in mortar lines between bricks create high-contrast boundaries that generate LBP codes similar to the natural variations in stone
+   - LBP's focus on local pixel relationships means it sometimes misses the regular geometric arrangement that distinguishes brick from stone
 
-2. **Brick misclassified as stone**: These errors often happened with weathered or textured bricks that lost their regular geometric patterns and started resembling stone's irregular surface.
 
 ### 6.2 Algorithm-specific Misclassification Patterns
 
@@ -157,7 +161,7 @@ The LBP confusion matrix shows:
 
 This pattern suggests that LBP struggles with textures that have both regular and irregular elements (like brick and wood). The binary patterns may be capturing similar local variations despite the textures being visually distinct at a larger scale.
 
-## 8. Conclusion and Recommendations
+## 8. Conclusion
 
 ### 8.1 Key Findings
 
@@ -170,3 +174,13 @@ This pattern suggests that LBP struggles with textures that have both regular an
    - LBP: Performs well for textures with distinctive local intensity variations
 
 4. **Classifier selection matters**: SVM worked well with GLCM's statistical features, while Random Forest handled LBP's histogram features effectively.
+
+### 8.2 Potential Future Work
+
+1. **Hybrid approach**: Combine complementary features from both GLCM and LBP to leverage strengths of each method
+
+2. **Adaptive parameter selection**: Implement automatic parameter tuning to handle varying texture scales
+
+3. **Enhanced preprocessing**: Apply more sophisticated preprocessing to normalize lighting and perspective variations
+
+4. **Feature selection**: Analyze feature importance to identify which specific GLCM and LBP features contribute most to classification performance

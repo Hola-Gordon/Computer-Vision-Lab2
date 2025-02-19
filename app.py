@@ -159,36 +159,53 @@ class TextureClassifierApp:
                             outputs=input_img
                         )
 
-            # Bottom section: Model metrics
+            # Bottom section: Model metrics - General performance
             gr.Markdown("### Model Performance Metrics")
-            
-            # Replace the Markdown-based confusion matrix with a dedicated HTML component
             with gr.Row():
                 for method in ["GLCM", "LBP"]:
                     with gr.Column():
                         gr.Markdown(f"#### {method} Model Performance")
                         metrics = self.metrics.get(method, {})
-                        confusion_matrix = np.array(metrics.get('confusion_matrix', []))
                         
-                        # Display basic metrics with Markdown
-                        metrics_md = f"""- **Accuracy**: {metrics.get('accuracy', 0):.2f}%
-        - **Precision**: {metrics.get('precision', 0):.2f}%
-        - **Recall**: {metrics.get('recall', 0):.2f}%
-
-        Per-class Accuracy:
-        """
+                        # Display general metrics with Markdown
+                        general_metrics_md = f"""- **Accuracy**: {metrics.get('accuracy', 0):.2f}%
+- **Precision**: {metrics.get('precision', 0):.2f}%
+- **Recall**: {metrics.get('recall', 0):.2f}%"""
+                        
+                        gr.Markdown(general_metrics_md)
+            
+            # New section: Per-class accuracy metrics
+            gr.Markdown("### Per-class Accuracy")
+            with gr.Row():
+                for method in ["GLCM", "LBP"]:
+                    with gr.Column():
+                        gr.Markdown(f"#### {method} Class-specific Performance")
+                        metrics = self.metrics.get(method, {})
                         class_accuracies = metrics.get('class_accuracies', [])
+                        
+                        # Create per-class accuracy markdown
+                        per_class_md = ""
                         if class_accuracies and len(class_accuracies) > 0:
                             for i in range(min(len(class_accuracies), len(self.class_names))):
-                                metrics_md += f"- {self.class_names[i]}: {class_accuracies[i]:.2f}%\n"
+                                per_class_md += f"- **{self.class_names[i].capitalize()}**: {class_accuracies[i]:.2f}%\n"
+                        else:
+                            per_class_md = "No per-class accuracy data available"
                         
-                        gr.Markdown(metrics_md)
+                        gr.Markdown(per_class_md)
                         
-                        # Now use gr.HTML() for the confusion matrix instead of embedding in Markdown
+            # Confusion matrix section
+            gr.Markdown("### Confusion Matrices")
+            with gr.Row():
+                for method in ["GLCM", "LBP"]:
+                    with gr.Column():
+                        metrics = self.metrics.get(method, {})
+                        confusion_matrix = np.array(metrics.get('confusion_matrix', []))
+                        
+                        # Display confusion matrix as HTML
                         if confusion_matrix.size > 0:
                             confusion_html = self.create_confusion_matrix_html(confusion_matrix)
                             gr.HTML(confusion_html)
-            
+        
         return iface
 
     def train_models(self):

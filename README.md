@@ -5,9 +5,9 @@ A machine learning application that classifies textures (stone, brick, wood) usi
 
 ## Demo
 
-Try it out: [Texture Classifier Demo](https://yourusername-texture-classifier.hf.space)
+Try it out: [Texture Classifier Demo](https://huggingface.co/spaces/zanegu/TextureClassifier)
 
-![Screenshot](screenshot.png)
+![Screenshot](data/demo.png)
 
 ## Overview
 
@@ -19,20 +19,6 @@ This application classifies texture images into three categories:
 It uses two different texture analysis methods:
 - Gray Level Co-occurrence Matrix (GLCM) with SVM
 - Local Binary Patterns (LBP) with Random Forest
-
-## Installation
-
-```bash
-# Clone repository
-git clone https://github.com/yourusername/texture-classifier.git
-cd texture-classifier
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run application
-python app.py
-```
 
 ## Usage
 
@@ -52,11 +38,3 @@ texture-classifier/
 ├── requirements.txt    # Dependencies
 └── README.md
 ```
-
-## Requirements
-
-- Python 3.6+
-- OpenCV
-- scikit-image
-- scikit-learn
-- Gradio

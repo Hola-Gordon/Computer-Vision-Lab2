@@ -28,9 +28,17 @@ The GLCM-based classifier significantly outperformed the LBP-based classifier ac
 
 ### 3.1 Data Quality Impact
 
-The initial dataset contained images with various disturbances such as shadows, inconsistent lighting, and background elements. This significantly affected classification accuracy for both models. After refining the dataset to use more consistent images (e.g., pure brick walls with minimal disturbance), accuracy improved substantially.
+When I started collecting texture images, I didn't filter for quality. This created several problems that hurt my classification accuracy. Once I switched to using cleaner, more consistent images, the results improved dramatically.
 
-**Key Finding**: Image quality and consistency are critical factors in texture classification. Controlled images yield much higher accuracy than uncontrolled ones.
+#### Why Image Quality Matters
+
+**Lighting Issues:** Think of a brick wall photographed at different times of day. Morning light shows clear texture, noon sun washes it out, and evening creates long shadows. To my algorithm, these looked like completely different textures! LBP was especially confused since it relies on brightness patterns between pixels.
+
+**Background Distractions:** Wood images with knots or brick images where the mortar lines were prominent often confused the classifiers. The algorithms sometimes focused on these irregular elements instead of the actual texture patterns.
+
+**Angle Problems:** When I took photos from different angles, regular patterns became distorted. This was particularly bad for brick classification using LBP, as the algorithm couldn't recognize the same pattern when viewed from different perspectives.
+
+Ultimately, using controlled images was like giving my algorithms clean, consistent data to learn from. The improvement in accuracy shows just how important image quality is for texture classification.
 
 ### 3.2 Algorithm Comparison
 

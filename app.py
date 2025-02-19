@@ -13,6 +13,7 @@ import json
 
 class TextureClassifierApp:
     def __init__(self):
+        """Initialize the TextureClassifierApp with data loaders and classifiers."""
         self.data_loader = DataLoader("data/raw") 
         self.class_names = self.data_loader.classes
         self.glcm_extractor = GLCMExtractor()
@@ -21,7 +22,16 @@ class TextureClassifierApp:
         self.lbp_classifier = TextureClassifier(self.lbp_extractor, 'rf')
 
     def predict(self, image, method):
-        '''Predict the class of the input image using the selected method.'''
+        """
+        Predict the class of the input image using the selected method.
+        
+        Args:
+            image: Input image as numpy array
+            method: String indicating which classifier to use ('GLCM' or 'LBP')
+            
+        Returns:
+            Dictionary mapping class names to probability scores
+        """
         if image is None:
             return None
             
@@ -38,7 +48,12 @@ class TextureClassifierApp:
                 for i, prob in enumerate(probabilities)}
 
     def load_example_images(self):
-        """Load example images from data/examples directory only"""
+        """
+        Load example images from data/examples directory only.
+        
+        Returns:
+            Dictionary mapping class names to example image arrays
+        """
         examples = {}
         for class_name in self.class_names:
             class_path = os.path.join("data/examples", class_name)
@@ -54,16 +69,63 @@ class TextureClassifierApp:
                             break
         return examples
 
-    def create_interface(self):
-        """Create the Gradio interface for the texture classifier."""
+    def create_confusion_matrix_html(self, confusion_matrix):
+        """
+        Create HTML visualization for confusion matrix with color coding.
+        
+        Args:
+            confusion_matrix: Numpy array containing the confusion matrix values
+            
+        Returns:
+            HTML string representing the colored confusion matrix
+        """
+        # Create HTML table with color coding
+        html_table = """
+        <div style="margin-top: 10px;">
+            <h4>Confusion Matrix</h4>
+            <table style="border-collapse: collapse; text-align: center;">
+        """
+        # Add header row with class names
+        html_table += "<tr><th></th>"
+        for class_name in self.class_names:
+            html_table += f"<th style='padding: 8px; border: 1px solid gray;'>{class_name}</th>"
+        html_table += "</tr>"
+        
+        # Get max value for color scaling
+        max_val = np.max(confusion_matrix)
+        
+        # Add data rows
+        for i, row in enumerate(confusion_matrix):
+            html_table += f"<tr><td style='padding: 8px; border: 1px solid gray; font-weight: bold;'>{self.class_names[i]}</td>"
+            for j, cell in enumerate(row):
+                # Calculate color intensity (darker blue for higher values)
+                intensity = int(200 * (1 - cell / max_val)) if max_val > 0 else 200
+                bg_color = f"rgb({intensity}, {intensity}, 255)"
+                # Highlight diagonal (correct predictions) with a different color
+                if i == j:
+                    bg_color = f"rgb(100, 200, 100)"
+                html_table += f"<td style='padding: 8px; border: 1px solid gray; background-color: {bg_color};'>{cell}</td>"
+            html_table += "</tr>"
+        
+        html_table += """
+            </table>
+        </div>
+        """
+        return html_table
 
+    def create_interface(self):
+        """
+        Create the Gradio interface for the texture classifier.
+        
+        Returns:
+            A configured Gradio Blocks interface
+        """
         example_images = self.load_example_images()
         
         with gr.Blocks() as iface:
             with gr.Row():
                 gr.Markdown("# Texture Classifier")
             
-
             # Top section: Image upload and classification
             with gr.Row():
                 with gr.Column():
@@ -99,6 +161,8 @@ class TextureClassifierApp:
 
             # Bottom section: Model metrics
             gr.Markdown("### Model Performance Metrics")
+            
+            # Replace the Markdown-based confusion matrix with a dedicated HTML component
             with gr.Row():
                 for method in ["GLCM", "LBP"]:
                     with gr.Column():
@@ -106,68 +170,34 @@ class TextureClassifierApp:
                         metrics = self.metrics.get(method, {})
                         confusion_matrix = np.array(metrics.get('confusion_matrix', []))
                         
+                        # Display basic metrics with Markdown
                         metrics_md = f"""- **Accuracy**: {metrics.get('accuracy', 0):.2f}%
-            - **Precision**: {metrics.get('precision', 0):.2f}%
-            - **Recall**: {metrics.get('recall', 0):.2f}%
+        - **Precision**: {metrics.get('precision', 0):.2f}%
+        - **Recall**: {metrics.get('recall', 0):.2f}%
 
-            Per-class Accuracy:
-            """
+        Per-class Accuracy:
+        """
                         class_accuracies = metrics.get('class_accuracies', [])
                         if class_accuracies and len(class_accuracies) > 0:
                             for i in range(min(len(class_accuracies), len(self.class_names))):
                                 metrics_md += f"- {self.class_names[i]}: {class_accuracies[i]:.2f}%\n"
                         
-                        # Only one confusion matrix display section
-                        if confusion_matrix.size > 0:
-                            # Text version for reference
-                            metrics_md += "\nConfusion Matrix:\n```\n"
-                            for row in confusion_matrix:
-                                metrics_md += f"{row}\n"
-                            metrics_md += "```\n"
-                            
-                            # Visualization using HTML
-                            metrics_md += "\nConfusion Matrix Visualization:\n"
-                            # Create HTML table with color coding
-                            html_table = "<table style='border-collapse: collapse; text-align: center;'>"
-                            # Add header row with class names
-                            html_table += "<tr><th></th>"
-                            for class_name in self.class_names:
-                                html_table += f"<th style='padding: 8px; border: 1px solid gray;'>{class_name}</th>"
-                            html_table += "</tr>"
-                            
-                            # Get max value for color scaling
-                            max_val = np.max(confusion_matrix)
-                            
-                            # Add data rows
-                            for i, row in enumerate(confusion_matrix):
-                                html_table += f"<tr><td style='padding: 8px; border: 1px solid gray; font-weight: bold;'>{self.class_names[i]}</td>"
-                                for j, cell in enumerate(row):
-                                    # Calculate color intensity (darker blue for higher values)
-                                    intensity = int(200 * (1 - cell / max_val)) if max_val > 0 else 200
-                                    bg_color = f"rgb({intensity}, {intensity}, 255)"
-                                    # Highlight diagonal (correct predictions) with a different color
-                                    if i == j:
-                                        bg_color = f"rgb(100, 200, 100)"
-                                    html_table += f"<td style='padding: 8px; border: 1px solid gray; background-color: {bg_color};'>{cell}</td>"
-                                html_table += "</tr>"
-                            html_table += "</table>"
-                            
-                            metrics_md += html_table
-
-                        
                         gr.Markdown(metrics_md)
-            
-            # classify_btn.click(
-            #     fn=self.predict,
-            #     inputs=[input_img, method_choice],
-            #     outputs=result_label
-            # )
+                        
+                        # Now use gr.HTML() for the confusion matrix instead of embedding in Markdown
+                        if confusion_matrix.size > 0:
+                            confusion_html = self.create_confusion_matrix_html(confusion_matrix)
+                            gr.HTML(confusion_html)
             
         return iface
 
     def train_models(self):
-        """Train models using data from raw directory and return evaluation metrics.
-        de"""
+        """
+        Train models using data from raw directory and return evaluation metrics.
+        
+        Returns:
+            Dictionary containing evaluation metrics for both models
+        """
         images, labels = self.data_loader.load_dataset() 
         X_train, X_test, y_train, y_test = train_test_split(
             images, labels, test_size=0.3, random_state=42
@@ -202,6 +232,7 @@ class TextureClassifierApp:
         return self.metrics
 
     def save_models(self):
+        """Save trained models and evaluation metrics to disk."""
         os.makedirs("trained_models", exist_ok=True)
         self.glcm_classifier.save("trained_models/glcm_model.pkl")
         self.lbp_classifier.save("trained_models/lbp_model.pkl")
@@ -209,6 +240,7 @@ class TextureClassifierApp:
             json.dump(self.metrics, f, indent=2)
 
     def load_models(self):
+        """Load trained models and evaluation metrics from disk."""
         self.glcm_classifier.load("trained_models/glcm_model.pkl")
         self.lbp_classifier.load("trained_models/lbp_model.pkl")
         if os.path.exists("trained_models/metrics.json"):
@@ -216,7 +248,16 @@ class TextureClassifierApp:
                 self.metrics = json.load(f)
 
     def predict_with_visual_feedback(self, image, method):
-        """Predict with regular output and generate a visual indicator"""
+        """
+        Predict with regular output and generate a visual indicator.
+        
+        Args:
+            image: Input image as numpy array
+            method: String indicating which classifier to use ('GLCM' or 'LBP')
+            
+        Returns:
+            Tuple of (prediction dictionary, HTML visual feedback)
+        """
         if image is None:
             return None, None
                 
@@ -256,6 +297,7 @@ class TextureClassifierApp:
 
 
 def main():
+    """Main function to initialize the app and launch the interface."""
     app = TextureClassifierApp()
     
     if os.path.exists("trained_models/glcm_model.pkl"):

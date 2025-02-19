@@ -21,6 +21,7 @@ class TextureClassifierApp:
         self.lbp_classifier = TextureClassifier(self.lbp_extractor, 'rf')
 
     def predict(self, image, method):
+        '''Predict the class of the input image using the selected method.'''
         if image is None:
             return None
             
@@ -54,6 +55,8 @@ class TextureClassifierApp:
         return examples
 
     def create_interface(self):
+        """Create the Gradio interface for the texture classifier."""
+
         example_images = self.load_example_images()
         
         with gr.Blocks() as iface:

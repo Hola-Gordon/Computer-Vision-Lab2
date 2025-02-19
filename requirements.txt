@@ -1,0 +1,6 @@
+gradio==5.13.1
+gradio_client==1.6.0
+numpy==1.26.4
+Pillow==10.0.0
+opencv-python==4.9.0.80
+scikit-image==0.23.2
